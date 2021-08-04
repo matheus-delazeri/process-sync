@@ -5,19 +5,38 @@
 #include <unistd.h>
 
 sem_t main_empty,sec_empty;
+sem_t sem_main;
 sem_t impress;
-int ver = 0, main_index = 0, sec_index = 0;
+pthread_t *main_buffer, *sec_buffer;
+int main_index = 0, sec_index = 0, MAX;
+
+void show_trace(){
+    printf("Threads in main buffer\n");
+    printf("----------------------\n");
+    for(int i=0; i<MAX; i++){
+        printf("Slot %d [%ld] \n", i, main_buffer[i]);
+    }
+    printf("----------------------\n");
+}
 
 void *adm_thread(){
-    main_index++;
-    sem_wait(&impress);
-
     pthread_t id = pthread_self();
-    printf("Thread [%ld] is adm\n", id);
+    sem_wait(&sem_main);
+    main_buffer[main_index] = id;
+    if(main_index!=MAX){
+        main_index++;
+    }
+    sem_post(&sem_main);
 
-    ver++;
+    sem_wait(&impress);
+    sleep(1);
+    main_buffer[main_index] = 0;
+    if(main_index!=0){
+        main_index--;
+    }
+
+    show_trace();
     sem_post(&impress);
-    main_index--;
     sem_post(&main_empty);
     return NULL;
 }
@@ -27,7 +46,6 @@ void *div_thread(){
     sem_wait(&impress);
 
     pthread_t id = pthread_self();
-    printf("Thread [%ld] is diverse\n", id);
 
     sem_post(&impress);
     sec_index--;
@@ -36,9 +54,9 @@ void *div_thread(){
 }
 
 int main(int argc, char **argv){
-    int MAX, QTD_ADM, QTD_DIVERSOS, thread_count = 0;
+    int QTD_ADM, QTD_DIVERSOS, thread_count = 0;
     int adm_count = 0, div_count = 0;
-    pthread_t *main_buffer, *sec_buffer, *all_threads;
+    pthread_t *all_threads;
     srand(time(NULL)); 
     if (argc == 4 && strtol(argv[1], NULL, 10) != 0) {
         MAX = abs(strtol(argv[1], NULL, 10));
@@ -55,6 +73,7 @@ int main(int argc, char **argv){
     }
 
     sem_init(&main_empty, 0, MAX);
+    sem_init(&sem_main, 0, 1);
     sem_init(&sec_empty, 0, MAX);
     sem_init(&impress, 0, 1);
     main_buffer = (pthread_t*)malloc(MAX * sizeof(pthread_t));
@@ -63,13 +82,13 @@ int main(int argc, char **argv){
 
     while(adm_count != QTD_ADM){
         sem_wait(&main_empty);
-        pthread_create(&all_threads[thread_count], NULL, adm_thread, (void *)main_buffer);
+        pthread_create(&all_threads[thread_count], NULL, adm_thread, NULL);
         adm_count++;
         thread_count++;
     }
     while(div_count != QTD_DIVERSOS){
         sem_wait(&sec_empty);
-        pthread_create(&all_threads[thread_count], NULL, div_thread, (void *)sec_buffer);
+        pthread_create(&all_threads[thread_count], NULL, div_thread, NULL);
         div_count++;
         thread_count++;
     }
