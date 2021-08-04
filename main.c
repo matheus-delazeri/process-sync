@@ -4,39 +4,41 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-sem_t main_sem;
-sem_t sec_sem;
-int ver = 0;
+sem_t main_empty,sec_empty;
+sem_t impress;
+int ver = 0, main_index = 0, sec_index = 0;
 
 void *adm_thread(){
-    sem_wait(&main_sem);
+    main_index++;
+    sem_wait(&impress);
+
     pthread_t id = pthread_self();
     printf("Thread [%ld] is adm\n", id);
 
-    if(ver!=0){
-        sem_post(&sec_sem);
-    }else{
-        sem_post(&main_sem);
-        ver++;
-    }
+    ver++;
+    sem_post(&impress);
+    main_index--;
+    sem_post(&main_empty);
     return NULL;
 }
 
 void *div_thread(){
-    sem_wait(&sec_sem);
+    sec_index++;
+    sem_wait(&impress);
 
     pthread_t id = pthread_self();
     printf("Thread [%ld] is diverse\n", id);
 
-    ver = 0;
-    sem_post(&main_sem);
+    sem_post(&impress);
+    sec_index--;
+    sem_post(&sec_empty);
     return NULL;
 }
 
 int main(int argc, char **argv){
-    int MAX, QTD_ADM, QTD_DIVERSOS;
+    int MAX, QTD_ADM, QTD_DIVERSOS, thread_count = 0;
     int adm_count = 0, div_count = 0;
-    pthread_t *main_buffer, *sec_buffer;
+    pthread_t *main_buffer, *sec_buffer, *all_threads;
     srand(time(NULL)); 
     if (argc == 4 && strtol(argv[1], NULL, 10) != 0) {
         MAX = abs(strtol(argv[1], NULL, 10));
@@ -52,32 +54,34 @@ int main(int argc, char **argv){
         exit(0);
     }
 
-    sem_init(&main_sem, 0, 1);
-    sem_init(&sec_sem, 0, 0);
+    sem_init(&main_empty, 0, MAX);
+    sem_init(&sec_empty, 0, MAX);
+    sem_init(&impress, 0, 1);
     main_buffer = (pthread_t*)malloc(MAX * sizeof(pthread_t));
     sec_buffer = (pthread_t*)malloc(MAX * sizeof(pthread_t));
-    while(adm_count!=QTD_ADM || div_count!=QTD_DIVERSOS){
-        if(adm_count!=QTD_ADM+1){
-            pthread_create(&main_buffer[adm_count], NULL, adm_thread, NULL);
-        }
-        if(div_count!=QTD_DIVERSOS+1){
-            pthread_create(&sec_buffer[div_count], NULL, div_thread, NULL);
-        }
+    all_threads = (pthread_t*)malloc((QTD_ADM+QTD_DIVERSOS) * sizeof(pthread_t));
 
-        adm_count = adm_count<=QTD_ADM ? adm_count+1 : QTD_ADM+1;
-        div_count = div_count<=QTD_DIVERSOS ? div_count+1 : QTD_DIVERSOS+1;
+    while(adm_count != QTD_ADM){
+        sem_wait(&main_empty);
+        pthread_create(&all_threads[thread_count], NULL, adm_thread, (void *)main_buffer);
+        adm_count++;
+        thread_count++;
     }
-    while(adm_count<=QTD_ADM || div_count<=QTD_DIVERSOS){
-        pthread_join(main_buffer[adm_count], NULL);
-        pthread_join(sec_buffer[div_count], NULL);
-
-        adm_count = adm_count<=QTD_ADM ? adm_count+1 : adm_count;
-        div_count = div_count<=QTD_DIVERSOS ? div_count+1 : div_count;
+    while(div_count != QTD_DIVERSOS){
+        sem_wait(&sec_empty);
+        pthread_create(&all_threads[thread_count], NULL, div_thread, (void *)sec_buffer);
+        div_count++;
+        thread_count++;
+    }
+    for(int i=0; i<(QTD_ADM+QTD_DIVERSOS); i++){
+        pthread_join(all_threads[i], NULL);
     }
 
-    sem_destroy(&main_sem);
-    sem_destroy(&sec_sem);
+    sem_destroy(&main_empty);
+    sem_destroy(&sec_empty);
+    sem_destroy(&impress);
 
     free(main_buffer);
     free(sec_buffer);
+    free(all_threads);
 }
