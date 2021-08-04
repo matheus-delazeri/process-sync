@@ -2,33 +2,41 @@
 #include <semaphore.h>
 #include <pthread.h>
 #include <stdlib.h>
+#include <unistd.h>
 
-typedef struct {
-    int *gen_time;
-    int *imp_time;
-} file_struct;
+sem_t main_sem;
+sem_t sec_sem;
+int ver = 0;
 
-sem_t sem;
-
-void *impress(void *file){
-    sem_wait(&sem);
+void *adm_thread(){
+    sem_wait(&main_sem);
     pthread_t id = pthread_self();
-    file_struct *actual_file = file;
-    int gen_time = *(actual_file->gen_time);
-    int imp_time = *(actual_file->imp_time);
-    int *return_args = malloc(sizeof (int));
-    return_args[0] = id;
-    printf("Thread [%ld] running...\n", id);
+    printf("Thread [%ld] is adm\n", id);
 
-    free(actual_file);
-    sem_post(&sem);
-    printf("Thread [%ld] ended\n", id);
-    return return_args;
+    if(ver!=0){
+        sem_post(&sec_sem);
+    }else{
+        sem_post(&main_sem);
+        ver++;
+    }
+    return NULL;
+}
+
+void *div_thread(){
+    sem_wait(&sec_sem);
+
+    pthread_t id = pthread_self();
+    printf("Thread [%ld] is diverse\n", id);
+
+    ver = 0;
+    sem_post(&main_sem);
+    return NULL;
 }
 
 int main(int argc, char **argv){
-    int i, imp_time, gen_time, MAX, QTD_ADM, QTD_DIVERSOS;
-    pthread_t *adm_vect, *div_vect;
+    int MAX, QTD_ADM, QTD_DIVERSOS;
+    int adm_count = 0, div_count = 0;
+    pthread_t *main_buffer, *sec_buffer;
     srand(time(NULL)); 
     if (argc == 4 && strtol(argv[1], NULL, 10) != 0) {
         MAX = abs(strtol(argv[1], NULL, 10));
@@ -43,27 +51,33 @@ int main(int argc, char **argv){
         printf("Ex.: ./<file-name> 100 4 4\n");
         exit(0);
     }
-    sem_init(&sem, 0, 4);
-    adm_vect = (pthread_t*)malloc(QTD_ADM * sizeof(pthread_t));
-    for(i=0; i<QTD_ADM; i++){
-        gen_time = rand()%6;
-        imp_time = rand()%6;
-        file_struct *file = malloc(sizeof *file);
-        file->gen_time = &gen_time;
-        file->imp_time = &imp_time;
-        if(pthread_create(&adm_vect[i], NULL, impress, file)){
-            free(file);
+
+    sem_init(&main_sem, 0, 1);
+    sem_init(&sec_sem, 0, 0);
+    main_buffer = (pthread_t*)malloc(MAX * sizeof(pthread_t));
+    sec_buffer = (pthread_t*)malloc(MAX * sizeof(pthread_t));
+    while(adm_count!=QTD_ADM || div_count!=QTD_DIVERSOS){
+        if(adm_count!=QTD_ADM+1){
+            pthread_create(&main_buffer[adm_count], NULL, adm_thread, NULL);
         }
+        if(div_count!=QTD_DIVERSOS+1){
+            pthread_create(&sec_buffer[div_count], NULL, div_thread, NULL);
+        }
+
+        adm_count = adm_count<=QTD_ADM ? adm_count+1 : QTD_ADM+1;
+        div_count = div_count<=QTD_DIVERSOS ? div_count+1 : QTD_DIVERSOS+1;
     }
-    for(i=0; i<QTD_ADM; i++){
-        void *status = NULL;
-        pthread_join(adm_vect[i], &status);
+    while(adm_count<=QTD_ADM || div_count<=QTD_DIVERSOS){
+        pthread_join(main_buffer[adm_count], NULL);
+        pthread_join(sec_buffer[div_count], NULL);
+
+        adm_count = adm_count<=QTD_ADM ? adm_count+1 : adm_count;
+        div_count = div_count<=QTD_DIVERSOS ? div_count+1 : div_count;
     }
-    sem_close(&sem);
 
-    div_vect = (pthread_t*)malloc(QTD_DIVERSOS * sizeof(pthread_t));
+    sem_destroy(&main_sem);
+    sem_destroy(&sec_sem);
 
-
-    free(adm_vect);
-    free(div_vect);
+    free(main_buffer);
+    free(sec_buffer);
 }
