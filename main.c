@@ -23,6 +23,7 @@ void *adm_thread(){
     pthread_t id = pthread_self();
     sem_wait(&sem_main);
     main_buffer[main_index] = id;
+    int cur_index = main_index;
     if(main_index!=MAX){
         main_index++;
     }
@@ -30,12 +31,15 @@ void *adm_thread(){
 
     sem_wait(&impress);
     sleep(1);
-    main_buffer[main_index] = 0;
     if(main_index!=0){
         main_index--;
     }
-
     show_trace();
+    for(int i=0; i<MAX-1; i++){
+        main_buffer[i] = main_buffer[i+1];
+        main_buffer[i+1] = 0;
+    }
+
     sem_post(&impress);
     sem_post(&main_empty);
     return NULL;
@@ -97,6 +101,7 @@ int main(int argc, char **argv){
     }
 
     sem_destroy(&main_empty);
+    sem_destroy(&sem_main);
     sem_destroy(&sec_empty);
     sem_destroy(&impress);
 
