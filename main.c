@@ -8,15 +8,21 @@ typedef struct {
     int *imp_time;
 } file_struct;
 
+sem_t sem;
+
 void *impress(void *file){
-    file_struct *actual_file = file;
+    sem_wait(&sem);
     pthread_t id = pthread_self();
+    file_struct *actual_file = file;
     int gen_time = *(actual_file->gen_time);
     int imp_time = *(actual_file->imp_time);
     int *return_args = malloc(sizeof (int));
     return_args[0] = id;
+    printf("Thread [%ld] running...\n", id);
 
     free(actual_file);
+    sem_post(&sem);
+    printf("Thread [%ld] ended\n", id);
     return return_args;
 }
 
@@ -37,7 +43,7 @@ int main(int argc, char **argv){
         printf("Ex.: ./<file-name> 100 4 4\n");
         exit(0);
     }
-
+    sem_init(&sem, 0, 4);
     adm_vect = (pthread_t*)malloc(QTD_ADM * sizeof(pthread_t));
     for(i=0; i<QTD_ADM; i++){
         gen_time = rand()%6;
@@ -52,8 +58,8 @@ int main(int argc, char **argv){
     for(i=0; i<QTD_ADM; i++){
         void *status = NULL;
         pthread_join(adm_vect[i], &status);
-        printf("Id: %d\n", ((int*)status)[0]); 
     }
+    sem_close(&sem);
 
     div_vect = (pthread_t*)malloc(QTD_DIVERSOS * sizeof(pthread_t));
 
