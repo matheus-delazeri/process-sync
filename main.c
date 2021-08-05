@@ -57,32 +57,30 @@ int buffer_empty(int buffer){
 }
 
 void *adm_thread(){
-    pthread_t id = pthread_self();
     sem_wait(&main_empty);
+    pthread_t id = pthread_self();
     sem_wait(&sem_main);
     main_buffer[main_index] = id;
-    if(main_index!=MAX){
+    if(main_index<MAX){
         main_index++;
     }
     sem_post(&sem_main);
 
     sem_wait(&impress_adm);
-    adm_ver++;
     srand(time(NULL)); 
     int imp_time = (rand() % 3)+1;
-    exec_time += imp_time;
     show_trace(0, id, imp_time);
     sleep(imp_time);
+    exec_time += imp_time;
     if(main_index!=0){
         main_index--;
     }
-    if(MAX!=1){
-        for(int i=0; i<MAX-1; i++){
-                main_buffer[i] = main_buffer[i+1];
-                main_buffer[i+1] = 0;
-        }
+    for(int i=0; i<MAX-1; i++){
+        main_buffer[i] = main_buffer[i+1];
+        main_buffer[i+1] = 0;
     }
 
+    adm_ver++;
     printf("\n\tO arquivo [%ld] foi impresso com sucesso!\n", id);
     printf("\n\t-------------------------------------------\n");
     sem_post(&main_empty);
@@ -91,15 +89,15 @@ void *adm_thread(){
     }else{
         sem_post(&impress_adm);
     }
-
+    return NULL;
 }
 
 void *div_thread(){
-    pthread_t id = pthread_self();
     sem_wait(&sec_empty);
+    pthread_t id = pthread_self();
     sem_wait(&sem_sec);
     sec_buffer[sec_index] = id;
-    if(sec_index!=MAX){
+    if(sec_index<MAX){
         sec_index++;
     }
     sem_post(&sem_sec);
@@ -107,20 +105,18 @@ void *div_thread(){
     sem_wait(&impress_div);
     srand(time(NULL)); 
     int imp_time = (rand() % 3)+1;
-    exec_time += imp_time;
     show_trace(1, id, imp_time);
     sleep(imp_time);
+    exec_time += imp_time;
     if(sec_index!=0){
         sec_index--;
     }
-    if(MAX!=1){
-        for(int i=0; i<MAX-1; i++){
-            sec_buffer[i] = sec_buffer[i+1];
-            sec_buffer[i+1] = 0;
-        }
+    for(int i=0; i<MAX-1; i++){
+        sec_buffer[i] = sec_buffer[i+1];
+        sec_buffer[i+1] = 0;
     }
-    adm_ver = 0;
 
+    adm_ver = 0;
     printf("\n\tO arquivo [%ld] foi impresso com sucesso!\n", id);
     printf("\n\t-------------------------------------------\n");
     sem_post(&sec_empty);
@@ -129,7 +125,7 @@ void *div_thread(){
     }else{
         sem_post(&impress_div);
     }
-
+    return NULL;
 }
 
 int main(int argc, char **argv){
@@ -149,8 +145,8 @@ int main(int argc, char **argv){
         printf("Ex.: ./<file-name> 100 4 4\n");
         exit(0);
     }
-    imp_div_value = QTD_ADM!=0 ? 0 : 1;
 
+    imp_div_value = QTD_ADM!=0 ? 0 : 1;
     sem_init(&main_empty, 0, MAX);
     sem_init(&sem_main, 0, 1);
     sem_init(&sec_empty, 0, MAX);
@@ -174,6 +170,7 @@ int main(int argc, char **argv){
     for(int i=0; i<(QTD_ADM+QTD_DIVERSOS); i++){
         pthread_join(all_threads[i], NULL);
     }
+
     printf("\n\tArquivos no buffer principal\n");
     printf("\t-----------\n");
     for(int i=0; i<MAX; i++){
