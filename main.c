@@ -12,22 +12,22 @@ int main_index = 0, sec_index = 0, MAX, exec_time = 0, adm_ver = 0;
 
 void show_trace(int file_type, long int id, int imp_time){
     printf("\n\t-------------------------------------------\n");
-    printf("\n\tArquivo sendo impresso: [%ld]\n", id);
+    printf("\n\tFile being printed: [%ld]\n", id);
     switch (file_type){
     case 0:
-        printf("\tTipo do arquivo: administrativo\n");
+        printf("\tFile type: administrative\n");
         break;
     case 1:
-        printf("\tTipo do arquivo: diverso\n");
+        printf("\tFile type: diverse\n");
         break; 
     }
-    printf("\tTempo estimado: %ds\n", imp_time);
-    printf("\n\tArquivos no buffer principal\n");
+    printf("\tEstimated time: %ds\n", imp_time);
+    printf("\n\tFiles in the main buffer\n");
     printf("\t-----------\n");
     for(int i=0; i<MAX; i++){
         printf("\tSlot %d - [%ld] \n", i, main_buffer[i]);
     }
-    printf("\n\tArquivos no buffer secundario\n");
+    printf("\n\tFiles in the secondary buffer\n");
     printf("\t-----------\n");
     for(int i=0; i<MAX; i++){
         printf("\tSlot %d - [%ld] \n", i, sec_buffer[i]);
@@ -81,7 +81,7 @@ void *adm_thread(){
     }
 
     adm_ver++;
-    printf("\n\tO arquivo [%ld] foi impresso com sucesso!\n", id);
+    printf("\n\tThe file [%ld] was successfully printed!\n", id);
     printf("\n\t-------------------------------------------\n");
     sem_post(&main_empty);
     if((adm_ver==2 && buffer_empty(1)==0)||buffer_empty(0)==1){
@@ -117,7 +117,7 @@ void *div_thread(){
     }
 
     adm_ver = 0;
-    printf("\n\tO arquivo [%ld] foi impresso com sucesso!\n", id);
+    printf("\n\tThe file [%ld] was successfully printed!\n", id);
     printf("\n\t-------------------------------------------\n");
     sem_post(&sec_empty);
     if(buffer_empty(0)==0){
@@ -137,11 +137,11 @@ int main(int argc, char **argv){
         QTD_ADM = abs(strtol(argv[2], NULL, 10));
         QTD_DIVERSOS = abs(strtol(argv[3], NULL, 10));
     } else if(argc > 1 && strtol(argv[1], NULL, 10)==0) {
-        printf("O armazenamento (MAX) deve ser maior que 0.\n");
+        printf("The buffer size must be greater than 0.\n");
         exit(0);
     }
     else {
-        printf("É necessário passar a capacidade de armazenamento (MAX), o numero de arquivos administrativos (QTD_ADM) e o numero de arquivos diversos (QTD_DIVERSOS) por parametro.\n");
+        printf("It's necessary to pass the buffer size, the number of administrative files and the number of diverse files by parameter.\n");
         printf("Ex.: ./<file-name> 100 4 4\n");
         exit(0);
     }
@@ -171,21 +171,21 @@ int main(int argc, char **argv){
         pthread_join(all_threads[i], NULL);
     }
 
-    printf("\n\tArquivos no buffer principal\n");
+    printf("\n\tFiles in the main buffer\n");
     printf("\t-----------\n");
     for(int i=0; i<MAX; i++){
         printf("\tSlot %d - [%ld] \n", i, main_buffer[i]);
     }
-    printf("\n\tArquivos no buffer secundario\n");
+    printf("\n\tFiles in the secondary buffer\n");
     printf("\t-----------\n");
     for(int i=0; i<MAX; i++){
         printf("\tSlot %d - [%ld] \n", i, sec_buffer[i]);
     }
     printf("\n\t-------------------------------------------\n");
-    printf("\tArquivos administrativos impressos: [%d]\n", QTD_ADM);
-    printf("\tArquivos diversos impressos: [%d]\n", QTD_DIVERSOS);
+    printf("\tAdministrative files printed: [%d]\n", QTD_ADM);
+    printf("\tDiverse files printed: [%d]\n", QTD_DIVERSOS);
     printf("\tTotal: [%d]\n", QTD_ADM+QTD_DIVERSOS);
-    printf("\tTempo de execucao: %ds\n", exec_time);
+    printf("\tExecution time: %ds\n", exec_time);
     printf("\t-------------------------------------------\n");
 
     sem_destroy(&main_empty);
