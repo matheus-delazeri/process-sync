@@ -11,7 +11,7 @@ gcc -pthread sync.c -o sync
 ```
 2. Now, execute the `sync` file. You'll need to pass the buffer size (both will have the same size), the number of administrative files (this files are prioritized) and the number of diverse files. Ex.:
 ```
-./threads 5 3 4 
+./sync 5 3 4 
 ```
 `5` being the size of both buffers, `3` being the number of adm files and `4` being the number of diverse files.
 
